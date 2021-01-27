@@ -1,45 +1,65 @@
+// ********************************
+// BACKGROUND SUBTRACTION EXAMPLE *
+// ********************************
 let video;
-let threshold;
-let thresholdSlider;
 let prevImg;
-let currentImg;
 let diffImg;
+let currImg;
+let thresholdSlider;
+let threshold;
 let grid;
 
-/**
- * P5 setup functionality
- *
- * @return void.
- */
-function setup() {
-  createCanvas(640 * 2, 480);
-  pixelDensity(1);
-  video = createCapture(VIDEO);
-  video.hide();
-  noStroke();
-  
-  thresholdSlider = createSlider(0, 255, 255);
-  thresholdSlider.position(20, 20);
+const camWidth = 640;
+const camHeight = 480;
 
-  grid = new Grid(640,480);
+
+let noteSounds = {};
+
+const keys = ['c', 'c-', 'd', 'd-', 'e', 'f', 'f-', 'g', 'g-', 'a', 'a-', 'b'];
+const octaves = 7;
+
+function preload () {
+  soundFormats('ogg');
+  for (let i = 0; i < keys.length; i++) {
+    for (let j = 2; j <= octaves; j++) {
+      const file = `${keys[i]}${j}`;
+      noteSounds[file] = loadSound(`./assets/${file}.ogg`);
+      //noteSounds[file].playMode('restart');
+      noteSounds[file].duration(0.1);
+    }
+  }
 }
 
-/**
- * P5 draw functionality
- *
- * @return void.
- */
-function draw () {
+function setup() {
+    pixelDensity(1);
+    createCanvas(camWidth * 2, camHeight);
+    video = createCapture(VIDEO, camWidth, camHeight);
+    video.hide();
+
+    thresholdSlider = createSlider(0, 255, 40);
+    thresholdSlider.position(20, 20);
+
+    //console.log(noteSounds);
+
+  grid = new Grid(camWidth, camWidth, 40, noteSounds);
+}
+
+function draw() {
+  pixelDensity(1);
   background(0);
-  image(video, 0, 0);
 
   //push();
-  //translate(width / 2, 0); // move to far corner
-  //scale(-1.0, 1.0);    // flip x-axis backwards
-  //image(video, 0, 0); //video on canvas, position, dimensions
-  //pop();
+  
+  
 
-  console.warn(video.width, video.height);
+  
+  push();
+  translate(width / 2, 0)
+  scale(-1.0, 1.0); 
+  image(video, 0, 0, camWidth, camHeight);
+  pop();
+  
+  //pop();
 
   currImg = createImage(video.width, video.height);
   currImg.copy(video, 0, 0, video.width, video.height, 0, 0, video.width, video.height);
@@ -48,47 +68,69 @@ function draw () {
   currImg.filter(BLUR, 3);
 
   diffImg = createImage(video.width, video.height);
-  diffImg.resize(video.width / 4, video.height / 4);
   
+  diffImg.resize(video.width / 4, video.height / 4);
+
   diffImg.loadPixels();
 
   threshold = thresholdSlider.value();
 
-  if (prevImg) {
-    currImg.loadPixels();
-    prevImg.loadPixels();
-    for (let x = 0, i = currImg.width; x < i; x++) {
-      for (let y = 0, j = currImg.height; y < j; y++) {
-        const pixel = ((currImg.width * y) + x) * 4;
-        
-        const redSource = currImg.pixels[pixel];
-        const greenSource = currImg.pixels[pixel + 1];
-        const blueSource = currImg.pixels[pixel + 2];
+  if (typeof prevImg !== 'undefined') {
+      prevImg.loadPixels();
+      currImg.loadPixels();
+      for (var x = 0; x < currImg.width; x += 1) {
+          for (var y = 0; y < currImg.height; y += 1) {
+              var index = (x + (y * currImg.width)) * 4;
+              var redSource = currImg.pixels[index + 0];
+              var greenSource = currImg.pixels[index + 1];
+              var blueSource = currImg.pixels[index + 2];
 
-        const redBack = prevImg.pixels[pixel];
-        const greenBack = prevImg.pixels[pixel + 1];
-        const blueBack = prevImg.pixels[pixel + 2];
+              var redBack = prevImg.pixels[index + 0];
+              var greenBack = prevImg.pixels[index + 1];
+              var blueBack = prevImg.pixels[index + 2];
 
-        let d = dist(redSource, greenSource, blueSource, redBack, greenBack, blueBack);
-        if (d > threshold) {
-          diffImg.pixels[pixel] = 0;
-          diffImg.pixels[pixel + 1] = 0;
-          diffImg.pixels[pixel + 2] = 0;
-          diffImg.pixels[pixel + 3] = 255;
-        } else {
-          diffImg.pixels[pixel] = 255;
-          diffImg.pixels[pixel + 1] = 255;
-          diffImg.pixels[pixel + 2] = 255;
-          diffImg.pixels[pixel + 3] = 255;
-        }
+              var d = dist(redSource, greenSource, blueSource, redBack, greenBack, blueBack);
+
+              if (d > threshold) {
+                  diffImg.pixels[index + 0] = 0;
+                  diffImg.pixels[index + 1] = 0;
+                  diffImg.pixels[index + 2] = 0;
+                  diffImg.pixels[index + 3] = 255;
+              } else {
+                  diffImg.pixels[index + 0] = 255;
+                  diffImg.pixels[index + 1] = 255;
+                  diffImg.pixels[index + 2] = 255;
+                  diffImg.pixels[index + 3] = 255;
+              }
+          }
       }
-    }
   }
   diffImg.updatePixels();
-  image(diffImg, 640, 0);
 
-  prevImg = createImage(video.width, video.height);
+  push();
+  translate(width, 0)
+  scale(-1.0, 1.0); 
+  image(diffImg, 0, 0, camWidth, camHeight);
+  pop();
+  
+
+  noFill();
+  stroke(255);
+  text(threshold, 160, 35);
+
+  prevImg = createImage(currImg.width, currImg.height);
   prevImg.copy(currImg, 0, 0, currImg.width, currImg.height, 0, 0, currImg.width, currImg.height);
 
+  //push();
+  //translate(width / 2, 0)
+  //scale(-1.0, 1.0); 
   grid.run(diffImg);
+  //pop();
+}
+
+// faster method for calculating color similarity which does not calculate root.
+// Only needed if dist() runs slow
+function distSquared(x1, y1, z1, x2, y2, z2){
+  var d = (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1) + (z2-z1)*(z2-z1);
+  return d;
 }
