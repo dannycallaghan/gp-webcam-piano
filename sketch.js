@@ -24,30 +24,34 @@ const delayGrid = 40; // Amount of frames until we consider grid ready
 let noteSounds = {}; // Store the preloaded sounds
 const keys = ['c', 'd', 'e', 'f', 'g', 'a', 'b']; // Musical notes (for the labels)
 const octaves = 7; // Octaves used
+const numHorizontalPositons = 16; // The number of horizontal gris positions used
 const startAtOctave = 2; // Lowest octave to use
 
 /**
  * P5 preload functionality
- * 
+ *
  * @return void.
  */
 function preload () {
   soundFormats('ogg');
-  // Preload all the piano sounds
-  for (let i = 0; i < keys.length; i++) {
-    for (let j = startAtOctave; j <= octaves; j++) {
-      const file = `${keys[i]}${j}`;
-      noteSounds[file] = loadSound(`./assets/${file}.ogg`);
+  // Maps the availabele sounds files (42 files, from seven octaves multipled by seven notes) and
+  // maps that to 112 positions (7 rows, 16 columns). Note, column wise, this is done using the
+  // ear rather than mathematics! We spread the notes A-G over the available columns
+  const keysSpread = ['c', 'c', 'c', 'd', 'd', 'e', 'e', 'f', 'f', 'g', 'g', 'a', 'a', 'a', 'b', 'b'];
+  //let result = {};
+  for (let i = startAtOctave; i <= octaves; i++) {
+    for (let j = 0; j < numHorizontalPositons; j++) {
+      noteSounds[`${i}${j}`] = loadSound(`./assets/${keysSpread[j]}${i}.ogg`);
     }
   }
 }
 
 /**
  * P5 setup functionality
- * 
+ *
  * @return void.
  */
-function setup() {
+function setup () {
   createCanvas(subjectWidth * 2, subjectHeight + topMargin);
   pixelDensity(1);
 
@@ -66,9 +70,9 @@ function setup() {
 /**
  * Set a flag to know when the video has loaded. We
  * want to delay the grid start, or it fills the screen
- * with the grid (causing all notes tp play before
- * fading them all out, ready to begin
- * 
+ * with the grid (causing all notes to play before
+ * fading them all out, ready to begin)
+ *
  * @return void.
  */
 function videoCallback () {
@@ -77,11 +81,11 @@ function videoCallback () {
 
 /**
  * P5 draw functionality
- * 
+ *
  * @return void.
  */
-function draw() {
-  background(100);
+function draw () {
+  background(0);
 
   // Flip the video and render it
   push();
@@ -96,11 +100,17 @@ function draw() {
   // Take picture
   currImg = createImage(video.width, video.height);
   currImg.copy(video, 0, 0, video.width, video.height, 0, 0, video.width, video.height);
+
+  // Scale down image processed (currImg) to increase performance
   currImg.resize(video.width / 4, video.height / 4);
+
+  // Use the blur filter with three iterations to reduce noise
   currImg.filter(BLUR, 3);
 
   // Create a diff picture
   diffImg = createImage(video.width, video.height);
+
+  // Scale down image processed (diffImg) to increase performance
   diffImg.resize(video.width / 4, video.height / 4);
   diffImg.loadPixels();
 
@@ -142,8 +152,8 @@ function draw() {
   // Flip the diff image and render it
   push();
   translate(width, 0)
-  scale(-1.0, 1.0); 
-  image(diffImg, 0, topMargin, subjectWidth, subjectHeight);
+  scale(-1.0, 1.0);
+  image(diffImg, width / 2 - (subjectWidth / 4), topMargin, subjectWidth / 4, subjectHeight / 4);
   pop();
 
   // Draw the text labels
@@ -169,7 +179,7 @@ function draw() {
  * above, we want to delay the use of the grid until it has
  * 'settled down' and everything is ready, so give
  * feedback to the user
- * 
+ *
  * @return void.
  */
 function drawLoading () {
@@ -188,7 +198,7 @@ function drawLoading () {
 
 /**
  * Label the slider
- * 
+ *
  * @return void.
  */
 function drawLabels () {
